@@ -1,9 +1,9 @@
 import Job from '../models/Job.js';
 import User from '../models/User.js';
 
-// @desc    Get all jobs (public)
+// @desc    Get all jobs (public, super_admin sees all including deleted)
 // @route   GET /api/jobs
-// @access  Public
+// @access  Public (optionalAuth for super_admin)
 export const getJobs = async (req, res) => {
   try {
     const { 
@@ -16,6 +16,12 @@ export const getJobs = async (req, res) => {
     } = req.query;
 
     const query = {};
+
+    // Public/contributors should not see soft-deleted jobs
+    // Super admin can see all jobs (including soft-deleted)
+    if (!req.user || req.user.role !== 'super_admin') {
+      query.isDeleted = false;
+    }
 
     if (category && category !== 'All') query.category = category;
     if (status) query.status = status;
@@ -223,7 +229,20 @@ export const deleteJob = async (req, res) => {
       });
     }
 
-    await Job.findByIdAndDelete(req.params.id);
+    // Super admin: Permanently delete
+    if (req.user.role === 'super_admin') {
+      await Job.findByIdAndDelete(req.params.id);
+      
+      return res.status(200).json({
+        success: true,
+        message: 'Job permanently deleted',
+      });
+    }
+
+    // Contributor: Soft delete (mark as deleted)
+    job.isDeleted = true;
+    job.deletedAt = new Date();
+    await job.save();
 
     // Deduct 1 point from user (except super_admin)
     if (req.user.role !== 'super_admin') {
@@ -338,7 +357,8 @@ export const getJobBySlug = async (req, res) => {
 // @access  Private
 export const getMyJobs = async (req, res) => {
   try {
-    const jobs = await Job.find({ postedBy: req.user.id })
+    // Contributors should not see their soft-deleted jobs
+    const jobs = await Job.find({ postedBy: req.user.id, isDeleted: false })
       .sort({ createdAt: -1 });
 
     res.status(200).json({

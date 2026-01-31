@@ -1,7 +1,7 @@
 import Blog from '../models/Blog.js';
 import User from '../models/User.js';
 
-// @desc    Get all blogs (Super Admin - includes unpublished)
+// @desc    Get all blogs (Super Admin - includes unpublished and soft-deleted)
 // @route   GET /api/blogs/all
 // @access  Private (super_admin only)
 export const getAllBlogs = async (req, res) => {
@@ -9,6 +9,7 @@ export const getAllBlogs = async (req, res) => {
     const { author } = req.query;
     
     const query = {};
+    // Super admin sees ALL blogs including soft-deleted
     if (author) query.author = author;
 
     const blogs = await Blog.find(query)
@@ -36,6 +37,9 @@ export const getBlogs = async (req, res) => {
     const { category, tag, search, page = 1, limit = 10 } = req.query;
 
     const query = { isPublished: true };
+
+    // Public API should not show soft-deleted blogs
+    query.isDeleted = false;
 
     if (category) query.category = category;
     if (tag) query.tags = { $in: [tag] };
@@ -223,7 +227,20 @@ export const deleteBlog = async (req, res) => {
       });
     }
 
-    await Blog.findByIdAndDelete(req.params.id);
+    // Super admin: Permanently delete
+    if (req.user.role === 'super_admin') {
+      await Blog.findByIdAndDelete(req.params.id);
+      
+      return res.status(200).json({
+        success: true,
+        message: 'Blog permanently deleted',
+      });
+    }
+
+    // Contributor: Soft delete (mark as deleted)
+    blog.isDeleted = true;
+    blog.deletedAt = new Date();
+    await blog.save();
 
     // Deduct 1 point from user (except super_admin)
     if (req.user.role !== 'super_admin') {
@@ -289,7 +306,8 @@ export const likeBlog = async (req, res) => {
 // @access  Private
 export const getMyBlogs = async (req, res) => {
   try {
-    const blogs = await Blog.find({ author: req.user.id })
+    // Contributors should not see their soft-deleted blogs
+    const blogs = await Blog.find({ author: req.user.id, isDeleted: false })
       .sort({ createdAt: -1 });
 
     res.status(200).json({

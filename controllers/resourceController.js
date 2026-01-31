@@ -1,14 +1,20 @@
 import Resource from '../models/Resource.js';
 import User from '../models/User.js';
 
-// @desc    Get all resources (public)
+// @desc    Get all resources (public, super_admin sees all including deleted)
 // @route   GET /api/resources
-// @access  Public
+// @access  Public (optionalAuth for super_admin)
 export const getResources = async (req, res) => {
   try {
     const { category, subcategory, search, page = 1, limit = 12 } = req.query;
 
     const query = {};
+
+    // Public/contributors should not see soft-deleted resources
+    // Super admin can see all resources (including soft-deleted)
+    if (!req.user || req.user.role !== 'super_admin') {
+      query.isDeleted = false;
+    }
 
     if (category) query.category = category;
     if (subcategory) query.subcategory = { $regex: subcategory, $options: 'i' };
@@ -220,7 +226,20 @@ export const deleteResource = async (req, res) => {
       });
     }
 
-    await Resource.findByIdAndDelete(req.params.id);
+    // Super admin: Permanently delete
+    if (req.user.role === 'super_admin') {
+      await Resource.findByIdAndDelete(req.params.id);
+      
+      return res.status(200).json({
+        success: true,
+        message: 'Resource permanently deleted',
+      });
+    }
+
+    // Contributor: Soft delete (mark as deleted)
+    resource.isDeleted = true;
+    resource.deletedAt = new Date();
+    await resource.save();
 
     // Deduct 1 point from user (except super_admin)
     if (req.user.role !== 'super_admin') {
@@ -315,7 +334,8 @@ export const incrementDownload = async (req, res) => {
 // @access  Private
 export const getMyResources = async (req, res) => {
   try {
-    const resources = await Resource.find({ postedBy: req.user.id })
+    // Contributors should not see their soft-deleted resources
+    const resources = await Resource.find({ postedBy: req.user.id, isDeleted: false })
       .sort({ createdAt: -1 });
 
     res.status(200).json({

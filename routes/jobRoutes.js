@@ -17,8 +17,8 @@ const router = express.Router();
 // Protected routes (MUST come before parameterized routes)
 router.get('/my/jobs', protect, getMyJobs);
 
-// Public routes
-router.get('/', getJobs);
+// Public routes (optionalAuth allows super_admin to see all posts)
+router.get('/', optionalAuth, getJobs);
 router.get('/grouped', getJobsGrouped);
 router.get('/slug/:slug', getJobBySlug);
 router.get('/:id', getJob);
