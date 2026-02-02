@@ -14,6 +14,7 @@ import Home from './pages/Home';
 import Jobs from './pages/Jobs';
 import JobDetails from './pages/JobDetails';
 import Resources from './pages/Resources';
+import ResourceDetails from './pages/ResourceDetails';
 import Blog from './pages/Blog';
 import BlogDetails from './pages/BlogDetails';
 import Courses from './pages/Courses';
@@ -132,6 +133,7 @@ function App() {
                 <Route path="/jobs" element={<Jobs />} />
                 <Route path="/jobs/:id" element={<JobDetails />} />
                 <Route path="/resources" element={<Resources />} />
+                <Route path="/resources/:id" element={<ResourceDetails />} />
                 <Route path="/blog" element={<Blog />} />
                 <Route path="/blog/:slug" element={<BlogDetails />} />
                 <Route path="/courses" element={<Courses />} />

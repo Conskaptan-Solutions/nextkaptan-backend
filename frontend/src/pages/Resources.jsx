@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { 
   Search, FolderOpen, FileText, Video, Download, 
   Heart, ExternalLink, Play 
@@ -185,7 +186,11 @@ const Resources = () => {
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
             {resources.map((resource) => (
-              <div key={resource._id} className="bg-white dark:bg-dark-200 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden hover:shadow-lg hover:shadow-gray-200/50 dark:hover:shadow-black/20 hover:border-blue-300 dark:hover:border-blue-700 transition-all duration-300 group">
+              <Link
+                key={resource._id}
+                to={`/resources/${resource._id}`}
+                className="bg-white dark:bg-dark-200 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden hover:shadow-lg hover:shadow-gray-200/50 dark:hover:shadow-black/20 hover:border-blue-300 dark:hover:border-blue-700 transition-all duration-300 group block"
+              >
                 {/* Thumbnail */}
                 <div className="relative aspect-video bg-gray-100 dark:bg-dark-200">
                   {resource.isVideo && resource.link ? (
@@ -246,7 +251,10 @@ const Resources = () => {
                     </div>
                     
                     <button
-                      onClick={() => handleDownload(resource)}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleDownload(resource);
+                      }}
                       className="flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 text-sm font-medium transition-colors"
                     >
                       {resource.isVideo ? 'Watch' : 'Get'}
@@ -254,7 +262,7 @@ const Resources = () => {
                     </button>
                   </div>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         )}
